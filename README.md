@@ -1,0 +1,116 @@
+# mtping
+
+`mtping` logs into a remote RouterOS router and performs a ping from there.
+
+This is useful for monitoring or pinging to things that only the router has access to
+(such a particular VRF), from a specific router IP/interface (e.g. to test an IPSec tunnel),
+or simply to eliminate the latency between the monitoring host and the router, and measure
+the true RTT between the router and the target (e.g. to monitor a circuit by ping to its
+next hop).
+
+As such you may use it in a similar way and for similar purposes as you might use
+CISCO-RTTMON-MIB on a Cisco device.
+
+As with any use of ping or traceroute, the usual disclaimer applies that routers typically
+treat ICMP destined to their control plane differently and at a lower priority than
+traffic on the forwarding plane. For mtping there is the additional disclaimer that the
+ping is being originated on the router in question, so this applies for the source too,
+and may in particular be unrepresentative on lower-end Routerboards or switches with
+low-powered CPUs.
+
+## Current status
+
+It's not finished. Don't use it.
+
+## Installation
+
+For now:
+
+```
+# pip3 install -r requirements.txt
+
+# cp mtping /usr/local/bin/
+or
+# ln -s `pwd`/mtping /usr/local/bin/mtping
+```
+
+## Arguments
+
+For now, arguments are documented in `mtping -h`
+
+Wherever possible, flags have been chosen to be compatible with `ping` from
+Linux [iputils](http://www.skbuff.net/iputils/) or, failing that, Windows ping.
+
+## API Login
+
+This tool uses the RouterOS API to login to the router to perform the ping. For this to work,
+you need the API enabled on the router, you need a user account with appropriate permissions to
+login, and you need to pass this information to mtping.
+
+### Enabling API on the router
+
+This is done in Winbox from IP->Services. Find the "api" line and enable it, ideally
+also locking it down to specific subnets.
+
+From the command-line, `/ip service enable api` and then
+`/ip service set api address=192.168.0.0/16` to lock it down.
+
+Note that using this API involves transmitting the username and password in plaintext.
+It is alternatively possible to use API-SSL, however note that you will need to create
+a certificate on the router before this can be used.
+
+Apart from enabling the API and setting allowed subnets there, you may also need to adjust
+your firewall rules to allow TCP port 8728 (or 8729 for API-SSL) on the `input` chain from
+your management subnet.
+
+### User account
+
+You need a user created, and this user must have the `api` privilege. It does not need
+to be a privileged user and in fact does not even nead `read` privilege.
+
+I recommend creating a new group `mtping` with only the privilege `api` and a new user in that
+group. You can do these in Winbox from System->Users, or on the command line as follows:
+
+```
+> /user group add name=mtping policy=api comment="mtping monitoring group"
+> /user add name=mtping password=Password01 group=mtping comment="mtping monitoring user"
+```
+
+## Packet size
+
+One key difference from ping on other platforms is the `-s` size parameter.
+
+On other platforms, you specify the number of data bytes to send in the echo request. Adding
+20 bytes for IPv4 header and 8 bytes for ICMP header gives the total size of the IP packet
+transmitted.
+
+On Mikrotik however, you simply specify the total size of the packet to transmit, and
+it automatically figures out how many data bytes to stuff it with. Personally I find this
+more intuitive, as typically you will be doing this because you are combining it with `-f`
+(do not fragment) in order to test the link MTUs.
+
+So these commands are equivalent and all send 1500-byte IP packets with DF bit set:
+
+mtping: `mtping -f -s 1500 10.0.0.1`
+Linux: `ping -M do -s 1472 10.0.0.1`
+Windows: `ping -f -l 1472 10.0.0.1`
+
+## Resolution
+
+Mikrotik RTT times are only reported to a resolution of 1ms.
+
+While the min/max/avg RTT is reported with 3-dp for compatibility with `ping`, be aware
+that it is not useful to draw any inference from the fractional part.
+
+## Python
+
+This was developed for Python 3. It may or may not work with Python 2. Pull requests
+for Python 2 compatibility will only be accepted if they do not convolute the code.
+
+
+## WARNING
+
+The format of the arguments and of the output is not yet stable.
+
+Obviously this program is intended to be used for scripting and automated monitoring,
+so this is a priority.
