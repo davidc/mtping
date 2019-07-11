@@ -1,12 +1,14 @@
-COPYRIGHT NOTICE
+# mtping License
+
+## COPYRIGHT NOTICE
 
 This software, including all programs, computer files, and associated documentation, are Copyright (c) 2019 David C A Croft. All rights reserved.
 
-DISCLAIMER
+## DISCLAIMER
 
 This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
 
-LICENSE
+## LICENSE
 
 Permission is granted to anyone to use this software for any purpose, including commercial applications, and to alter it and redistribute it freely, subject to the following restrictions:
 
