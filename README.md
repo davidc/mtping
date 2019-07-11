@@ -76,6 +76,38 @@ group. You can do these in Winbox from System->Users, or on the command line as 
 > /user add name=mtping password=Password01 group=mtping comment="mtping monitoring user"
 ```
 
+### Passing credentials to mtping
+
+You can pass the credentials either by environment variables or as arguments on the command-line.
+Arguments take priority, if specified.
+
+The environment variables and command-line arguments are:
+
+| Argument       | Environment  | Purpose |
+| --------       | -----------  | ------- |
+| -r, --router   | ROS_ROUTER   | The router to login into and ping from |
+| -u, --user     | ROS_USER     | The user name to login to the API with |
+| -p, --password | ROS_PASSWORD | The user name to login to the API with |
+
+Command-line arguments may be seen by other users on the system and may be logged, so
+environment variables are preferable.
+
+An easy way to do this is to create a file, e.g. `~/.mtping` with the following contents:
+
+```
+ROS_ROUTER=192.168.1.1
+ROS_USER=mtping
+ROS_PASSWORD=Password01
+```
+
+Then you can simply source this file into your current shell:
+
+```
+$ . ~/.mtping
+$ mtping 127.0.0.1     # pings from the default ROS_ROUTER
+$ mtping -r 192.168.5.1 127.0.0.1     # pings frmo 192.168.5.1 but with same credentials
+```
+
 ## Packet size
 
 One key difference from ping on other platforms is the `-s` size parameter.
@@ -114,3 +146,7 @@ The format of the arguments and of the output is not yet stable.
 
 Obviously this program is intended to be used for scripting and automated monitoring,
 so this is a priority.
+
+## License
+
+See [LICENSE.md](LICENSE.md)
