@@ -76,7 +76,7 @@ I recommend creating a new group `mtping` with only the privilege `api` and a ne
 group. You can do these in Winbox from System->Users, or on the command line as follows:
 
 ```
-> /user group add name=mtping policy=api comment="mtping monitoring group"
+> /user group add name=mtping policy=api,read,test comment="mtping monitoring group"
 > /user add name=mtping password=Password01 group=mtping comment="mtping monitoring user"
 ```
 
