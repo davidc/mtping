@@ -75,8 +75,8 @@ your management subnet.
 
 ### User account
 
-You need a user created, and this user must have the `api` privilege. It does not need
-to be a privileged user and in fact does not even nead `read` privilege.
+You need a user created, and this user must have the `api` and `test` privileges. It does not need
+to be a privileged user, although Mikrotik currently require it to also have `read` privilege.
 
 I recommend creating a new group `mtping` with only the privilege `api` and a new user in that
 group. You can do these in Winbox from System->Users, or on the command line as follows:
@@ -137,12 +137,15 @@ mtping: `mtping -f -s 1500 10.0.0.1`
 Linux: `ping -M do -s 1472 10.0.0.1`
 Windows: `ping -f -l 1472 10.0.0.1`
 
+In terms of the packet size received shown in the output, the size shown is again the
+total packet size. Confusingly on other systems, it is the neither the data bytes size you
+specified nor the total packet size, it is the ICMP packet size including ICMP header.
+
 ## Resolution
 
 Mikrotik RTT times are only reported to a resolution of 1ms.
 
-While the min/max/avg RTT is reported with 3-dp for compatibility with `ping`, be aware
-that it is not useful to draw any inference from the fractional part.
+This tool therefore only shows min/avg/max/mdev in integers as well.
 
 ## Python
 
