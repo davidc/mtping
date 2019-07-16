@@ -21,17 +21,17 @@ parser.add_argument('destination', nargs=1,
                     help='the host to ping to')
 
 parser.add_argument('-r', '--router', nargs=1,
-                    default=default_router,
+                    default=[default_router],
                     required=default_router is None,
                     help='the router to ping from. Optional if environment variable ROS_ROUTER is set.')
 
 parser.add_argument('-u', '--user', nargs=1,
-                    default=default_user,
+                    default=[default_user],
                     required=default_user is None,
                     help='the user to login to the API. Optional if environment variable ROS_USER is set. The user can be read-only, but it does need the "api" privilege.')
 
 parser.add_argument('-p', '--password', nargs=1,
-                    default=default_password,
+                    default=[default_password],
                     required=default_password is None,
                     help='the password to login to the API. Optional if environment variable ROS_PASSWORD is set. It is generally a bad idea to set the password '
                                  'on the command line, as arguments are visible to all users '
@@ -92,7 +92,6 @@ quiet = args.quiet
 #pprint(args)
 
 #sys.exit(0)
-
 
 connection = routeros_api.RouterOsApiPool(router, username=args.user[0], password=args.password[0])
 api = connection.get_api()
