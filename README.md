@@ -20,17 +20,11 @@ low-powered CPUs.
 
 ## Current status
 
-It's not finished. Don't use it.
-
-Once it's working and has a stable output format, a wrapper for monitoring plugins
-(Nagios-compatible) and a plugin for Smokeping will also be released.
-
-## WARNING
-
-The format of the arguments and of the output is not yet stable.
+Working, but the arguments and the output formats are not yet stable.
 
 Obviously this program is intended to be used for scripting and automated monitoring,
-so this is a priority.
+so this is a priority. Once it's working and has a stable output format, a wrapper for
+monitoring plugins (Nagios-compatible) and a plugin for Smokeping will also be released.
 
 ## Installation
 
@@ -202,10 +196,6 @@ are duplicates or missing packets - you may get a larger or smaller number of
 results than expected!
 
 TODO
-
-## Arguments
-
-Arguments are documented within the tool itself, use `mtping -h`.
 
 ## License
 
