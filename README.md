@@ -185,6 +185,7 @@ $ mtping www.example.com -c 3 -o json | jq
   "transmitted": 3,
   "received": 3,
   "duplicate": 0,
+  "errors": 0,
   "loss": 0,
   "rtt_min": 162,
   "rtt_avg": 162,
