@@ -122,16 +122,18 @@ transmitted.
 
 On Mikrotik however, you simply specify the total size of the packet to transmit, and
 it automatically figures out how many data bytes to stuff it with. Personally I find this
-more intuitive, as typically you will be doing this because you are combining it with `-f`
+more intuitive, as you will be typically setting the size because you are combining it with `-f`
 (do not fragment) in order to test the link MTUs.
 
 So these commands are equivalent and all send 1500-byte IP packets with DF bit set:
 
-| mtping:  | `mtping -f -s 1500 10.0.0.1` |
+| Platform | Command                       |
+| -------- | -------                       |
+| mtping:  | `mtping -f -s 1500 10.0.0.1`  |
 | Linux:   | `ping -M do -s 1472 10.0.0.1` |
-| Windows: | `ping -f -l 1472 10.0.0.1` |
+| Windows: | `ping -f -l 1472 10.0.0.1`    |
 
-In terms of the size received shown in the output, the size shown is again the
+In terms of the size received shown in the output, this is again the
 total packet size. Confusingly on other systems, it is the neither the data bytes size you
 specified nor the total packet size, it is the ICMP packet size including ICMP header.
 
@@ -195,7 +197,16 @@ results. Note that you need to look at the sequence numbers to determine if ther
 are duplicates or missing packets - you may get a larger or smaller number of
 results than expected!
 
-TODO
+Not yet implemented.
+
+## TODO
+
+- Investigate RouterOS returning two error codes per packet sent when fragmentation required.
+- Handle all the various error types automatically.
+- Abstract output formats into classes that are called by the main loop.
+- Implement json-detail output format.
+- Write Smokeping probe.
+- Write wrapper for monitoring-plugins style plugin, and an Icinga 2 definition.
 
 ## License
 
