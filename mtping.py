@@ -119,9 +119,8 @@ if (args.size is None):
 else:
     params['size'] = str(args.size[0])
 
-if not quiet:
-    print("PING {dest} (via {router}) {size} bytes total packet size.".
-          format(dest=destination, router=router, size=params['size']))
+print("PING {dest} (via {router}) {size} bytes total packet size." \
+      .format(dest=destination, router=router, size=params['size']))
 
     
 
@@ -157,7 +156,6 @@ try:
             pkts_transmitted += 1
             
         elif status == 'ok':
-            response_host = ping_response['host'].decode()
             response_time = int(ping_response['time'].decode().replace('ms', ''))
             response_seq = int(ping_response['seq'].decode())
 
@@ -166,20 +164,23 @@ try:
             else:
                 seen_seq.append(response_seq)
                 is_dup = False
-                
-            response_ttl = int(ping_response['ttl'].decode())
-            response_size = int(ping_response['size'].decode())
-            print("{size} bytes from {host}: icmp_seq={seq} ttl={ttl} time={time} ms" \
-                  .format(size=response_size, host=response_host, seq=response_seq, ttl=response_ttl, time=response_time), end='')
 
+            if not quiet:
+                response_host = ping_response['host'].decode()
+                response_ttl = int(ping_response['ttl'].decode())
+                response_size = int(ping_response['size'].decode())
+                print("{size} bytes from {host}: icmp_seq={seq} ttl={ttl} time={time} ms" \
+                      .format(size=response_size, host=response_host, seq=response_seq, ttl=response_ttl, time=response_time), end='')
+                if is_dup:
+                    print(" (DUP!)", end='')
+
+                print()
+                
             if is_dup:
                 pkts_duplicate += 1
-                print(" (DUP!)", end='')
             else:
                 pkts_transmitted += 1
                 pkts_received += 1
-
-            print()
                 
             rtt_sum += response_time
             rtt_sum2 += response_time * response_time
