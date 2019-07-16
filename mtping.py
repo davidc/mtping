@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-#sys.path.insert(0, '/home/david/mtping/RouterOS-api')
+sys.path.insert(0, '/home/david/mtping/RouterOS-api')
 
 import routeros_api
 from routeros_api import exceptions
@@ -62,6 +62,11 @@ parser.add_argument('-q', '--quiet',
                     action='store_const', const=True,
                     help='Do not print progress reports.')
 
+parser.add_argument('-d', '--debug',
+                    default=False,
+                    action='store_const', const=True,
+                    help='Pring debugging information.')
+
 parser.add_argument('-c', '--count', nargs=1,
                     default=[3],
                     type=int,
@@ -88,12 +93,13 @@ args = parser.parse_args()
 router = args.router[0]
 destination = args.destination[0]
 quiet = args.quiet
+debug = args.debug
 
 #pprint(args)
 
 #sys.exit(0)
 
-connection = routeros_api.RouterOsApiPool(router, username=args.user[0], password=args.password[0])
+connection = routeros_api.RouterOsApiPool(router, username=args.user[0], password=args.password[0], debug=debug)
 api = connection.get_api()
 
 if not quiet:
@@ -141,7 +147,7 @@ print("%d packets transmitted, %d received, %g%% packet loss, time ????0ms\n" % 
 
 if pkts_received > 0 or True:
     rtt_avg = rtt_total / 1#rtt_num
-    print("rtt min/avg/max/mdev = {min:0.3d}ms\n".format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
+    print("rtt min/avg/max/mdev = {min:0.3f}ms\n".format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
 
 
 
