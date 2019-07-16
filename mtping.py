@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 
 import sys
-sys.path.insert(0, '/home/david/mtping/RouterOS-api')
+#sys.path.insert(0, '/home/david/mtping/RouterOS-api')
 
 import routeros_api
 from routeros_api import exceptions
 import os
 import argparse
 from pprint import pprint
+import math
 
 
 default_router = os.environ['ROS_ROUTER'] if 'ROS_ROUTER' in os.environ else None
@@ -68,9 +69,9 @@ parser.add_argument('-d', '--debug',
                     help='Pring debugging information.')
 
 parser.add_argument('-c', '--count', nargs=1,
-                    default=[3],
+#                    default=[3],
                     type=int,
-                    help='the number of ICMP echo requests to send. 0..4294967295. 0 would ping forever, so is only allowed if not quiet')
+                    help='the number of ICMP echo requests to send. 0..4294967295. Unspecified or 0 means ping forever.')
 
 parser.add_argument('-s', '--size', nargs=1,
                     type=int,
@@ -102,72 +103,132 @@ debug = args.debug
 connection = routeros_api.RouterOsApiPool(router, username=args.user[0], password=args.password[0], debug=debug)
 api = connection.get_api()
 
-if not quiet:
-    print("connected to %s" % router)
+
 
 api_root = api.get_binary_resource('/');
 
 params = {
     'address': str(destination),
-    'count': str(args.count[0]),
     }
 
-if (args.size is not None):
+if (args.count is not None):
+    params['count'] = str(args.count[0])
+
+if (args.size is None):
+    params['size'] = 56
+else:
     params['size'] = str(args.size[0])
 
+if not quiet:
+    print("PING {dest} (via {router}) {size} bytes total packet size.".
+          format(dest=destination, router=router, size=params['size']))
+
+    
 
 ## TODO set api timeout to timeout expected for the number of pings
-## TODO can we alter RouterOS-api to stream results as they come in interactive mode rather than batching them up
+
+pkts_transmitted = 0
+pkts_received = 0
+pkts_duplicate = 0
+
+rtt_min = None
+rtt_max = None
+rtt_sum = 0
+rtt_sum2 = 0 # sum of square
+rtt_num = 0
+
+seen_seq = [] # track sequences already seen to detect duplicates
 
 try:
-    ping_result = api_root.call('ping', params)
+    ping_responses = api_root.call_async('ping', params)
+    for ping_response in ping_responses:
+        if debug:
+            pprint(ping_response)
+
+        if 'status' in ping_response:
+            status = ping_response['status'].decode()
+        else:
+            status = 'ok'
+
+        if status == 'timeout':
+            response_host = ping_response['host'].decode()
+            print("timeout waiting for response from {host}" \
+                  .format(host=response_host));
+            pkts_transmitted += 1
+            
+        elif status == 'ok':
+            response_host = ping_response['host'].decode()
+            response_time = int(ping_response['time'].decode().replace('ms', ''))
+            response_seq = int(ping_response['seq'].decode())
+
+            if response_seq in seen_seq:
+                is_dup = True
+            else:
+                seen_seq.append(response_seq)
+                is_dup = False
+                
+            response_ttl = int(ping_response['ttl'].decode())
+            response_size = int(ping_response['size'].decode())
+            print("{size} bytes from {host}: icmp_seq={seq} ttl={ttl} time={time} ms" \
+                  .format(size=response_size, host=response_host, seq=response_seq, ttl=response_ttl, time=response_time), end='')
+
+            if is_dup:
+                pkts_duplicate += 1
+                print(" (DUP!)", end='')
+            else:
+                pkts_transmitted += 1
+                pkts_received += 1
+
+            print()
+                
+            rtt_sum += response_time
+            rtt_sum2 += response_time * response_time
+            rtt_num += 1
+
+            if rtt_min is None or response_time < rtt_min:
+                rtt_min = response_time
+            if rtt_max is None or response_time > rtt_max:
+                rtt_max = response_time
+        else:
+            print("Unknown status {status}".format(status=status))
+            
+except KeyboardInterrupt:
+    # Do nothing, continue to print summary
+    pass
 except routeros_api.exceptions.RouterOsApiCommunicationError as e:
     print(e.original_message.decode(), file=sys.stderr)
     print(str(e), file=sys.stderr)
     sys.exit(1)
 
-pprint(ping_result)
 
-pkts_transmitted = 0
-pkts_received = 0
+print("")
+print("--- %s ping statistics (via %s) ---" % (destination, router))
+print("{tx} packets transmitted, {rx} received" \
+      .format(tx=pkts_transmitted, rx=pkts_received), end='')
+if pkts_duplicate > 0:
+    print(", +{dup} duplicates" \
+      .format(dup=pkts_duplicate), end='')
 
-rtt_min = None
-rtt_max = None
-rtt_total = 0
-rtt_num = 0
+if pkts_transmitted > 0:
+    #loss = 100.0 * (1 - (pkts_received / pkts_transmitted))
+    loss = ((pkts_transmitted - pkts_received) * 100.0) / pkts_transmitted;
 
-rtt_mdev = 0 # TODO
+    print(", {loss}% packet loss" \
+          .format(loss=loss), end='') # TODO this shouldn't have a .0 on the end
 
+print("")
 
+if rtt_num > 0:
+    rtt_avg = int(rtt_sum / rtt_num)
 
-loss = 99.3333333
-
-print("--- %s ping statistics (via %s) ---\n" % (destination, router))
-print("%d packets transmitted, %d received, %g%% packet loss, time ????0ms\n" % (pkts_transmitted, pkts_received, loss))
-
-if pkts_received > 0 or True:
-    rtt_avg = rtt_total / 1#rtt_num
-    print("rtt min/avg/max/mdev = {min:0.3f}ms\n".format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
-
-
-
-#https://github.com/iputils/iputils/blob/master/ping_common.c
-# printf(_("%ld received"), nreceived);
-# if (nrepeats)
-# printf(_(", +%ld duplicates"), nrepeats);
-# if (nchecksum)
-# printf(_(", +%ld corrupted"), nchecksum);
-# if (nerrors)
-# printf(_(", +%ld errors"), nerrors);
-
-# if (ntransmitted) {
-# #ifdef USE_IDN
-#     setlocale(LC_ALL, "C");
-# #endif
-#     printf(_(", %g%% packet loss"),
-#                   (float)((((long long)(ntransmitted - nreceived)) * 100.0) / ntransmitted));
-#     printf(_(", time %ldms"), 1000 * tv.tv_sec + (tv.tv_usec + 500) / 1000);
-#     }
+    # This slightly clumsy computation order is important to avoid
+    # integer rounding errors for small ping times.
+    tmvar = (rtt_sum2 - ((rtt_sum * rtt_sum) / rtt_num)) / rtt_num
+    rtt_mdev = int(math.sqrt(tmvar))
+    
+    print("rtt min/avg/max/mdev = {min}/{avg}/{max}/{mdev} ms" \
+          .format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
 
 
 
+#output format reference: https://github.com/iputils/iputils/blob/master/ping_common.c
