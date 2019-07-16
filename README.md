@@ -72,7 +72,7 @@ your management subnet.
 You need a user created, and this user must have the `api` and `test` privileges. It does not need
 to be a privileged user, although Mikrotik currently require it to also have `read` privilege.
 
-I recommend creating a new group `mtping` with only the privilege `api` and a new user in that
+I recommend creating a new group `mtping` with only the privileges `api,read,test` and a new user in that
 group. You can do these in Winbox from System->Users, or on the command line as follows:
 
 ```
