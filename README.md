@@ -89,7 +89,7 @@ group. You can do these in Winbox from System->Users, or on the command line as 
 ### Passing credentials to mtping
 
 You can pass the credentials either by environment variables or as arguments on the command-line.
-Arguments take priority, if specified.
+Arguments take precedence, if specified.
 
 The environment variables and command-line arguments are:
 
@@ -115,7 +115,7 @@ Then you can simply source this file into your current shell:
 ```
 $ . ~/.mtping
 $ mtping 127.0.0.1     # pings from the default ROS_ROUTER
-$ mtping -r 192.168.5.1 127.0.0.1     # pings frmo 192.168.5.1 but with same credentials
+$ mtping -r 192.168.5.1 127.0.0.1     # pings from 192.168.5.1 but with same credentials
 ```
 
 ## Packet size
@@ -133,11 +133,11 @@ more intuitive, as typically you will be doing this because you are combining it
 
 So these commands are equivalent and all send 1500-byte IP packets with DF bit set:
 
-mtping: `mtping -f -s 1500 10.0.0.1`
-Linux: `ping -M do -s 1472 10.0.0.1`
-Windows: `ping -f -l 1472 10.0.0.1`
+| mtping:  | `mtping -f -s 1500 10.0.0.1` |
+| Linux:   | `ping -M do -s 1472 10.0.0.1` |
+| Windows: | `ping -f -l 1472 10.0.0.1` |
 
-In terms of the packet size received shown in the output, the size shown is again the
+In terms of the size received shown in the output, the size shown is again the
 total packet size. Confusingly on other systems, it is the neither the data bytes size you
 specified nor the total packet size, it is the ICMP packet size including ICMP header.
 
@@ -145,7 +145,7 @@ specified nor the total packet size, it is the ICMP packet size including ICMP h
 
 Mikrotik RTT times are only reported to a resolution of 1ms.
 
-This tool therefore only shows min/avg/max/mdev in integers as well.
+This tool therefore only shows min/avg/max/mdev as integers as well.
 
 ## Python
 
