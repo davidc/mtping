@@ -152,6 +152,60 @@ This tool therefore only shows min/avg/max/mdev as integers as well.
 This was developed for Python 3. It may or may not work with Python 2. Pull requests
 for Python 2 compatibility will only be accepted if they do not convolute the code.
 
+## Output formats
+
+The output format can be selected with the `-o` argument. The default is 'human'.
+
+If an output other than 'human' is selected, the tool assumes it is being run
+non-interactively and will require the specification of a count (`-c`) otherwise it
+would run forever with no output.
+
+### human
+
+The default output format is 'human', which aims for an experience compatible with
+the familiar Linux [iputils](http://www.skbuff.net/iputils/) ping. Timings are however
+all shown as integer milliseconds.
+
+As with that tool, `-q` will suppress most output (including individual ping responses)
+and only show the header and summary lines.
+
+The 'human' output format is subject to change and should not be used for scripting.
+Other output formats exist for consumption by other programs.
+
+### json
+
+Upon completion, it will output a JSON representation of the summary, suitable for loading
+into another program:
+
+```
+$ mtping www.example.com -c 3 -o json | jq
+{
+  "destination": "www.example.com",
+  "router": "192.168.1.1",
+  "transmitted": 3,
+  "received": 3,
+  "duplicate": 0,
+  "loss": 0,
+  "rtt_min": 162,
+  "rtt_avg": 162,
+  "rtt_max": 162,
+  "rtt_mdev": 0
+}
+```
+
+### json-detail
+
+Upon completion, it will output the summary as above, as well as individual ping
+results. Note that you need to look at the sequence numbers to determine if there
+are duplicates or missing packets - you may get a larger or smaller number of
+results than expected!
+
+TODO
+
+## Arguments
+
+Arguments are documented within the tool itself, use `mtping -h`.
+
 ## License
 
 See [LICENSE.md](LICENSE.md)

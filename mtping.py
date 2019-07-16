@@ -9,6 +9,7 @@ import os
 import argparse
 from pprint import pprint
 import math
+import json
 
 
 default_router = os.environ['ROS_ROUTER'] if 'ROS_ROUTER' in os.environ else None
@@ -87,7 +88,7 @@ parser.add_argument('-t', '--ttl', nargs=1,
 
 parser.add_argument('-o', '--output', nargs=1,
                     default=['human'],
-                    help='The output format desired. Valid values: human (default), json')
+                    help='The output format desired. Valid values: human (default), json.')
 
 
 args = parser.parse_args()
@@ -95,14 +96,25 @@ router = args.router[0]
 destination = args.destination[0]
 quiet = args.quiet
 debug = args.debug
+output = args.output[0]
 
-#pprint(args)
+VALID_OUTPUT = ['human', 'json']
 
-#sys.exit(0)
+if output not in VALID_OUTPUT:
+    # TODO probably can have a callback in argparse to validate this?
+    print("Invalid output format %s" % (output), file=sys.stderr)
+    sys.exit(1)
+
+if output != 'human' and (args.count is None or args.count[0] < 1):
+    # TODO error_die (so it gets formatted for this output format)
+    print("Script output selected but count not specified (-c)", file=sys.stderr)
+    sys.exit(1)
+
+
+# Establish connection to router. Error will be throw here if unable to connect or login fails
 
 connection = routeros_api.RouterOsApiPool(router, username=args.user[0], password=args.password[0], debug=debug)
 api = connection.get_api()
-
 
 
 api_root = api.get_binary_resource('/');
@@ -119,8 +131,9 @@ if (args.size is None):
 else:
     params['size'] = str(args.size[0])
 
-print("PING {dest} (via {router}) {size} bytes total packet size." \
-      .format(dest=destination, router=router, size=params['size']))
+if output == 'human':
+    print("PING {dest} (via {router}) {size} bytes total packet size." \
+          .format(dest=destination, router=router, size=params['size']))
 
     
 
@@ -165,7 +178,7 @@ try:
                 seen_seq.append(response_seq)
                 is_dup = False
 
-            if not quiet:
+            if output == 'human' and not quiet:
                 response_host = ping_response['host'].decode()
                 response_ttl = int(ping_response['ttl'].decode())
                 response_size = int(ping_response['size'].decode())
@@ -202,23 +215,15 @@ except routeros_api.exceptions.RouterOsApiCommunicationError as e:
     sys.exit(1)
 
 
-print("")
-print("--- %s ping statistics (via %s) ---" % (destination, router))
-print("{tx} packets transmitted, {rx} received" \
-      .format(tx=pkts_transmitted, rx=pkts_received), end='')
-if pkts_duplicate > 0:
-    print(", +{dup} duplicates" \
-      .format(dup=pkts_duplicate), end='')
+# Calculate stats
 
+
+# loss is only valid if at least one packet was transmitted
 if pkts_transmitted > 0:
     #loss = 100.0 * (1 - (pkts_received / pkts_transmitted))
     loss = ((pkts_transmitted - pkts_received) * 100.0) / pkts_transmitted;
 
-    print(", {loss}% packet loss" \
-          .format(loss=loss), end='') # TODO this shouldn't have a .0 on the end
-
-print("")
-
+# rtt_avg and rtt_mdev are only valid if at least one reply was received
 if rtt_num > 0:
     rtt_avg = int(rtt_sum / rtt_num)
 
@@ -226,10 +231,47 @@ if rtt_num > 0:
     # integer rounding errors for small ping times.
     tmvar = (rtt_sum2 - ((rtt_sum * rtt_sum) / rtt_num)) / rtt_num
     rtt_mdev = int(math.sqrt(tmvar))
-    
-    print("rtt min/avg/max/mdev = {min}/{avg}/{max}/{mdev} ms" \
-          .format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
 
 
+# Output stats
 
-#output format reference: https://github.com/iputils/iputils/blob/master/ping_common.c
+if output == 'human':
+    #output format reference: https://github.com/iputils/iputils/blob/master/ping_common.c
+    print("")
+    print("--- %s ping statistics (via %s) ---" % (destination, router))
+    print("{tx} packets transmitted, {rx} received" \
+          .format(tx=pkts_transmitted, rx=pkts_received), end='')
+    if pkts_duplicate > 0:
+        print(", +{dup} duplicates" \
+              .format(dup=pkts_duplicate), end='')
+
+    if pkts_transmitted > 0:
+        print(", {loss}% packet loss" \
+              .format(loss=loss), end='') # TODO this shouldn't have a .0 on the end
+
+    print("")
+
+    if rtt_num > 0:
+        print("rtt min/avg/max/mdev = {min}/{avg}/{max}/{mdev} ms" \
+              .format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
+
+elif output == 'json':
+    result = { 'destination': destination,
+               'router': router,
+               'transmitted': pkts_transmitted,
+               'received': pkts_received,
+               'duplicate': pkts_duplicate,
+               }
+
+    if pkts_transmitted > 0:
+        result.update( { 'loss': loss,
+                         } );
+    if rtt_num > 0:
+        result.update( { 'rtt_min': rtt_min,
+                         'rtt_avg': rtt_avg,
+                         'rtt_max': rtt_max,
+                         'rtt_mdev': rtt_mdev,
+                         } );
+
+    print(json.dumps(result))
+
