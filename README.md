@@ -176,6 +176,7 @@ into another program:
 ```
 $ mtping www.example.com -c 3 -o json | jq
 {
+  "status": 0,
   "destination": "www.example.com",
   "router": "192.168.1.1",
   "transmitted": 3,
@@ -190,6 +191,23 @@ $ mtping www.example.com -c 3 -o json | jq
 }
 ```
 
+`status` is 0 to indicate that the ping command was successfully run (irrespective of whether
+any ping replies were received).
+
+A non-zero `status` indicates an error logging into the router or executing the ping.
+The status codes correspond with the Exit Status section of this document,
+and the object will also contain an `error` string detailing the error encountered. There
+may also be a `error_detail` string with further cryptic information.
+
+```
+$ mtping 192.168.1.48 -c 3 -o json -T green | jq
+{
+  "status": 5,
+  "error": "input does not match any value of routing-table",
+  "error_detail": "('Error \"input does not match any value of routing-table\" executing command b\\'/ping =address=192.168.1.48 =size=56 =count=3 =routing-table=green .tag=3\\'', b'input does not match any value of routing-table')"
+}
+```
+
 ### json-detail
 
 Upon completion, it will output the summary as above, as well as individual ping
@@ -198,6 +216,21 @@ are duplicates or missing packets - you may get a larger or smaller number of
 results than expected!
 
 Not yet implemented.
+
+## Exit Status
+
+`0` indicates the program ran successfully (even if the ping itself returned no results).
+
+`1` is an unhandled Python exception (TODO check this is the only thing it can exit)
+
+`2` indicates an error in validating the arguments.
+
+`3` indicates an error connecting to the router.
+
+`4` indicates an error logging into the router.
+
+`5` is an error from the router, which could also still be an argument error (e.g. if an invalid
+routing-table is specified).
 
 ## TODO
 

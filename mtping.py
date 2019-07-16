@@ -11,6 +11,26 @@ from pprint import pprint
 import math
 import json
 
+EXIT_BADARG = 2
+EXIT_CONNECTERROR = 3
+EXIT_LOGINERROR = 4
+EXIT_REMOTEERROR = 5
+
+def error_exit(code, message, detail=None):
+    global output, debug
+    if output == 'json':
+        error_obj = { 'status': code,
+                      'error': message }
+        if detail is not None:
+            error_obj['error_detail'] = detail
+        print(json.dumps(error_obj))
+    else:
+        print(message, file=sys.stderr)
+        if debug:
+            print(detail, file=sys.stderr)
+
+    sys.exit(code)
+
 
 default_router = os.environ['ROS_ROUTER'] if 'ROS_ROUTER' in os.environ else None
 default_user = os.environ['ROS_USER'] if 'ROS_USER' in os.environ else None
@@ -95,10 +115,20 @@ parser.add_argument('-o', '--output', nargs=1,
 
 args = parser.parse_args()
 
+# Get the output format first, in case we need to display errors using it
+
+VALID_OUTPUT = ['human', 'json']
+output = args.output[0]
+if output not in VALID_OUTPUT:
+    # TODO probably can have a callback in argparse to validate this?
+    print("Invalid output format %s" % (output), file=sys.stderr)
+    sys.exit(1)
+
+
 destination = args.destination[0]
 router = args.router[0]
 user = args.user[0]
-password=args.password[0]
+password = args.password[0]
 
 routing_table = None if args.table is None else args.table[0]
 src_address = None if args.src_address is None else args.src_address[0]
@@ -108,47 +138,43 @@ arp_ping = args.arp_ping
 
 count = None if args.count is None else args.count[0]
 if count is not None and count < 0:
-    print("Invalid count %d" % (count), file=sys.stderr)
-    sys.exit(1)
+    error_exit(EXIT_BADARG, "Invalid count %d" % (count))
         
 packet_size = args.size[0]
 if packet_size < 28 or packet_size > 65535:
-    print("Invalid size %d" % (packet_size), file=sys.stderr)
-    sys.exit(1)
+    error_exit(EXIT_BADARG, "Invalid size %d" % (packet_size))
 
 dscp = None if args.dscp is None else args.dscp[0]
 if dscp is not None and (dscp < 0 or dscp > 63):
-    print("Invalid DSCP %d" % (dscp), file=sys.stderr)
-    sys.exit(1)
+    error_exit(EXIT_BADARG, "Invalid DSCP %d" % (dscp))
 
 ttl = None if args.ttl is None else args.ttl[0]
 if ttl is not None and (ttl < 1 or ttl > 255):
-    print("Invalid TTL %d" % (ttl), file=sys.stderr)
-    sys.exit(1)
+    error_exit(EXIT_BADARG, "Invalid TTL %d" % (ttl))
     
 quiet = args.quiet
 debug = args.debug
 
-VALID_OUTPUT = ['human', 'json']
-output = args.output[0]
-if output not in VALID_OUTPUT:
-    # TODO probably can have a callback in argparse to validate this?
-    print("Invalid output format %s" % (output), file=sys.stderr)
-    sys.exit(1)
 
 # Check any parameters that need to be consistent with each other
 
 if output != 'human' and count is None:
-    # TODO error_die (so it gets formatted for this output format)
-    print("Script output selected but count not specified (-c)", file=sys.stderr)
-    sys.exit(1)
+    error_exit(EXIT_BADARG, "Script output selected but count not specified (-c)")
 
 
 # Establish connection to router. Error will be throw here if unable to connect or login fails
 
-connection = routeros_api.RouterOsApiPool(router, username=user, password=password, debug=debug)
-api = connection.get_api()
+# TODO add a timeout to connect
 
+try:
+    connection = routeros_api.RouterOsApiPool(router, username=user, password=password, debug=debug)
+    api = connection.get_api()
+except routeros_api.exceptions.RouterOsApiConnectionError as e:
+    error_exit(EXIT_CONNECTERROR, str(e))
+except routeros_api.exceptions.RouterOsApiCommunicationError as e:
+    # although we have str(e) as detail available, do not output it as it may contain
+    # an unencrypted password in the command string
+    error_exit(EXIT_REMOTEERROR, e.original_message.decode())
 
 api_root = api.get_binary_resource('/');
 
@@ -299,11 +325,7 @@ except KeyboardInterrupt:
     # Do nothing, continue to print summary
     pass
 except routeros_api.exceptions.RouterOsApiCommunicationError as e:
-    # TODO pass to error_die()
-    print(e.original_message.decode(), file=sys.stderr)
-    if debug:
-        print(str(e), file=sys.stderr)
-    sys.exit(1)
+    error_exit(EXIT_REMOTEERROR, e.original_message.decode(), str(e))
 
 
 # Calculate stats
@@ -351,7 +373,8 @@ if output == 'human':
               .format(min=rtt_min, avg=rtt_avg, max=rtt_max, mdev=rtt_mdev))
 
 elif output == 'json':
-    result = { 'destination': destination,
+    result = { 'status': 0,
+               'destination': destination,
                'router': router,
                'transmitted': pkts_transmitted,
                'received': pkts_received,
