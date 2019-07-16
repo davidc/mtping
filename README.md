@@ -22,6 +22,16 @@ low-powered CPUs.
 
 It's not finished. Don't use it.
 
+Once it's working and has a stable output format, a wrapper for monitoring plugins
+(Nagios-compatible) and a plugin for Smokeping will also be released.
+
+## WARNING
+
+The format of the arguments and of the output is not yet stable.
+
+Obviously this program is intended to be used for scripting and automated monitoring,
+so this is a priority.
+
 ## Installation
 
 For now:
@@ -95,9 +105,9 @@ environment variables are preferable.
 An easy way to do this is to create a file, e.g. `~/.mtping` with the following contents:
 
 ```
-ROS_ROUTER=192.168.1.1
-ROS_USER=mtping
-ROS_PASSWORD=Password01
+export ROS_ROUTER=192.168.1.1
+export ROS_USER=mtping
+export ROS_PASSWORD=Password01
 ```
 
 Then you can simply source this file into your current shell:
@@ -138,14 +148,6 @@ that it is not useful to draw any inference from the fractional part.
 
 This was developed for Python 3. It may or may not work with Python 2. Pull requests
 for Python 2 compatibility will only be accepted if they do not convolute the code.
-
-
-## WARNING
-
-The format of the arguments and of the output is not yet stable.
-
-Obviously this program is intended to be used for scripting and automated monitoring,
-so this is a priority.
 
 ## License
 
