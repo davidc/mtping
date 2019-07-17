@@ -117,7 +117,7 @@ args = parser.parse_args()
 
 # Get the output format first, in case we need to display errors using it
 
-VALID_OUTPUT = ['human', 'json']
+VALID_OUTPUT = ['human', 'json', 'smokeping']
 output = args.output[0]
 if output not in VALID_OUTPUT:
     # TODO probably can have a callback in argparse to validate this?
@@ -255,9 +255,10 @@ try:
 
         if status == 'timeout':
             response_host = ping_response['host'].decode()
-            print("timeout waiting for response from {host}" \
-                  .format(host=response_host));
             pkts_transmitted += 1
+            if output == 'human':
+                print("timeout waiting for response from {host}" \
+                      .format(host=response_host));
 
         elif status == 'TTL exceeded':
             if output == 'human' and not quiet:
@@ -277,6 +278,9 @@ try:
             else:
                 seen_seq.append(response_seq)
                 is_dup = False
+
+            if output == 'smokeping' and not is_dup:
+                print(response_time)
 
             if output == 'human' and not quiet:
                 response_host = ping_response['host'].decode()
@@ -319,7 +323,8 @@ try:
             if rtt_max is None or response_time > rtt_max:
                 rtt_max = response_time
         else:
-            print("Unknown status {status}".format(status=status), file=sys.stderr)
+            if output == 'human':
+                print("Unknown status {status}".format(status=status), file=sys.stderr)
             
 except KeyboardInterrupt:
     # Do nothing, continue to print summary

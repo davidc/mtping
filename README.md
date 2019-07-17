@@ -22,9 +22,11 @@ low-powered CPUs.
 
 Working, but the arguments and the output formats are not yet stable.
 
+A Smokeping probe is available.
+
 Obviously this program is intended to be used for scripting and automated monitoring,
 so this is a priority. Once it's working and has a stable output format, a wrapper for
-monitoring plugins (Nagios-compatible) and a plugin for Smokeping will also be released.
+monitoring plugins (Nagios-compatible) will also be released.
 
 ## Installation
 
@@ -217,6 +219,13 @@ results than expected!
 
 Not yet implemented.
 
+### smokeping
+
+Simply outputs the RTT time (in ms) for each non-duplicate reply received.
+If a ping times out or an error is received, nothing is output. So for example
+if you issue `-c 20` and only 17 lines are returned, there is 15% packet loss.
+
+
 ## Exit Status
 
 `0` indicates the program ran successfully (even if the ping itself returned no results).
@@ -232,14 +241,60 @@ Not yet implemented.
 `5` is an error from the router, which could also still be an argument error (e.g. if an invalid
 routing-table is specified).
 
+## Smokeping
+
+A Smokeping probe is included. Copy `MtPing.pm` to your smokeping probes directory
+(`/usr/share/perl5/Smokeping/probes` if you have installed from the Debian package).
+
+Full help on the options is then available using `smokeping -man Smokeping::probes::MtPing`
+
+Activate it by specifying the location to the `mtping` binary in your Probes section:
+
+```
+*** Probes ***
+
++ MtPing
+
+binary = /usr/local/bin/mtping
+```
+
+For the probe configuration, you can optionally specify defaults in the Probes section and/or
+then override them per Target.
+
+For each Target you wish to monitor with mtping, specify the `MtPing` probe type.
+
+Required parameters are the `ros_router`, `ros_user`, and `ros_password`, and the
+`host` to ping. Optionally specify the `routingtable`, `interface`, `srcaddress`, and
+`packetsize` parameters.
+
+```
+*** Targets ***
+
++ MyRemoteOffice
+
+menu = MyRemoteOffice
+title = MyRemoteOffice
+remark = In the green VRF
+probe = MtPing
+host = 10.10.10.2
+ros_router = 192.168.1.1
+ros_user = mtping
+ros_password = Password01
+srcaddress = 10.10.10.1
+routingtable = green
+interface = ether1
+
+```
+
+
 ## TODO
 
 - Investigate RouterOS returning two error codes per packet sent when fragmentation required.
 - Handle all the various error types automatically.
 - Abstract output formats into classes that are called by the main loop.
 - Implement json-detail output format.
-- Write Smokeping probe.
 - Write wrapper for monitoring-plugins style plugin, and an Icinga 2 definition.
+- Flag to automatically sweep range of sizes to determine true MTU with -f.
 
 ## License
 
