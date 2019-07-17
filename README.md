@@ -30,6 +30,9 @@ monitoring plugins (Nagios-compatible) will also be released.
 
 ## Installation
 
+Note that there is a Python 3 incompatibility in RouterOS-api so you will need
+to install this patch: https://github.com/socialwifi/RouterOS-api/pull/48
+
 For now:
 
 ```
