@@ -16,6 +16,10 @@ EXIT_CONNECTERROR = 3
 EXIT_LOGINERROR = 4
 EXIT_REMOTEERROR = 5
 
+ERROR_UNKNOWN = 0
+ERROR_TTL_EXCEEDED = 1
+ERROR_DONT_FRAGMENT = 2
+
 def error_exit(code, message, detail=None):
     global output, debug
     if output == 'json':
@@ -260,15 +264,6 @@ try:
                 print("timeout waiting for response from {host}" \
                       .format(host=response_host));
 
-        elif status == 'TTL exceeded':
-            if output == 'human' and not quiet:
-                response_host = ping_response['host'].decode()
-                response_seq = int(ping_response['seq'].decode())
-                print("From {host} icmp_seq={seq} Time to live exceeded" \
-                      .format(host=response_host, seq=response_seq))
-            pkts_transmitted += 1
-            pkts_error += 1
-            
         elif status == 'ok':
             response_time = int(ping_response['time'].decode().replace('ms', ''))
             response_seq = int(ping_response['seq'].decode())
@@ -323,8 +318,30 @@ try:
             if rtt_max is None or response_time > rtt_max:
                 rtt_max = response_time
         else:
-            if output == 'human':
-                print("Unknown status {status}".format(status=status), file=sys.stderr)
+
+            error_type = ERROR_UNKNOWN
+            if status == 'TTL exceeded':
+                error_type = ERROR_TTL_EXCEEDED
+            elif status == 'packet too large and cannot be fragmented':
+                error_type = ERROR_DONT_FRAGMENT
+
+            if output == 'human' and not quiet:
+                if 'host' in ping_response:
+                    print('From {host}' \
+                          .format(host=ping_response['host'].decode()), end='')
+                else:
+                    print('Error', end='')
+
+                if 'seq' in ping_response:
+                    response_seq = int(ping_response['seq'].decode())
+                    print(' icmp_seq={seq}' \
+                          .format(seq=response_seq), end='')
+
+                print(" {error}" \
+                      .format(error=status))
+
+            pkts_transmitted += 1
+            pkts_error += 1
             
 except KeyboardInterrupt:
     # Do nothing, continue to print summary
